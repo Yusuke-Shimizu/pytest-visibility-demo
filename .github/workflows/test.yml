@@ -1,0 +1,63 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-github-actions-annotate-failures pytest-cov
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+    
+    - name: Run tests with annotations and reports
+      run: |
+        pytest --color=yes --tb=short --annotate --junitxml=pytest-report.xml --cov=. --cov-report=xml --cov-report=html
+    
+    - name: Upload test report
+      uses: actions/upload-artifact@v4
+      if: always()  # 失敗時でもレポートをアップロード
+      with:
+        name: pytest-report-python-${{ matrix.python-version }}
+        path: pytest-report.xml
+    
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report-python-${{ matrix.python-version }}
+        path: |
+          coverage.xml
+          htmlcov/    - 
+name: Notify Slack on failure
+      if: failure() && github.event_name == 'push'
+      uses: rtCamp/action-slack-notify@v2
+      env:
+        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        SLACK_CHANNEL: 'ci-notifications'
+        SLACK_COLOR: danger
+        SLACK_MESSAGE: |
+          テストが失敗しました 🚨
+          ブランチ: ${{ github.ref_name }}
+          コミット: ${{ github.sha }}
+          詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        SLACK_TITLE: pytest 失敗通知
+        SLACK_USERNAME: GitHub Actions
