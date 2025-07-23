@@ -42,70 +42,8 @@ jobs:
           echo "✅ JUnit XML report generated successfully" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Parse JUnit XML and create table
-          echo "### Test Results Table" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Test Name | Status | Time (s) | Details |" >> $GITHUB_STEP_SUMMARY
-          echo "|-----------|--------|----------|---------|" >> $GITHUB_STEP_SUMMARY
-          
-          # Extract test results from XML using Python
-          python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
-import xml.etree.ElementTree as ET
-import os
-
-try:
-    tree = ET.parse('pytest-report.xml')
-    root = tree.getroot()
-    
-    for testcase in root.findall('.//testcase'):
-        name = testcase.get('name', 'Unknown')
-        classname = testcase.get('classname', '')
-        time = testcase.get('time', '0')
-        
-        # Shorten the test name for better display
-        display_name = name.replace('test_', '').replace('_', ' ').title()
-        
-        # Check for failures or errors
-        failure = testcase.find('failure')
-        error = testcase.find('error')
-        skipped = testcase.find('skipped')
-        
-        if failure is not None:
-            status = "❌ FAIL"
-            details = failure.get('message', 'Failed')[:50] + "..."
-        elif error is not None:
-            status = "💥 ERROR"
-            details = error.get('message', 'Error')[:50] + "..."
-        elif skipped is not None:
-            status = "⏭️ SKIP"
-            details = skipped.get('message', 'Skipped')[:50] + "..."
-        else:
-            status = "✅ PASS"
-            details = "Success"
-        
-        print(f"| {display_name} | {status} | {float(time):.3f} | {details} |")
-        
-    # Summary statistics
-    total = len(root.findall('.//testcase'))
-    failures = len(root.findall('.//failure'))
-    errors = len(root.findall('.//error'))
-    skipped = len(root.findall('.//skipped'))
-    passed = total - failures - errors - skipped
-    
-    print("")
-    print("### Summary Statistics")
-    print("")
-    print(f"| Metric | Count |")
-    print(f"|--------|-------|")
-    print(f"| Total Tests | {total} |")
-    print(f"| ✅ Passed | {passed} |")
-    print(f"| ❌ Failed | {failures} |")
-    print(f"| 💥 Errors | {errors} |")
-    print(f"| ⏭️ Skipped | {skipped} |")
-    
-except Exception as e:
-    print(f"Error parsing XML: {e}")
-EOF
+          # Parse JUnit XML and create table using external script
+          python3 scripts/parse_test_results.py >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "📊 Detailed report available in artifacts" >> $GITHUB_STEP_SUMMARY
@@ -120,17 +58,3 @@ EOF
         name: pytest-report-python-${{ matrix.python-version }}
         path: pytest-report.xml
     
-    - name: Notify Slack on failure
-      if: failure() && github.event_name == 'push'
-      uses: rtCamp/action-slack-notify@v2
-      env:
-        SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-        SLACK_CHANNEL: 'ci-notifications'
-        SLACK_COLOR: danger
-        SLACK_MESSAGE: |
-          テストが失敗しました 🚨
-          ブランチ: ${{ github.ref_name }}
-          コミット: ${{ github.sha }}
-          詳細: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        SLACK_TITLE: pytest 失敗通知
-        SLACK_USERNAME: GitHub Actions
