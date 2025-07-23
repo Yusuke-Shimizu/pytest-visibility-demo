@@ -47,7 +47,7 @@ jobs:
         path: |
           coverage.xml
           htmlcov/    - 
-name: Notify Slack on failure
+    - name: Notify Slack on failure
       if: failure() && github.event_name == 'push'
       uses: rtCamp/action-slack-notify@v2
       env:
