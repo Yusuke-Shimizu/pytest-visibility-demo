@@ -118,7 +118,8 @@ EOF
       if: always()
       with:
         name: pytest-report-python-${{ matrix.python-version }}
-        path: pytest-report.xml 
+        path: pytest-report.xml
+    
     - name: Notify Slack on failure
       if: failure() && github.event_name == 'push'
       uses: rtCamp/action-slack-notify@v2
