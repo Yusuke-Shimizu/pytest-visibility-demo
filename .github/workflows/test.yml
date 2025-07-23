@@ -30,7 +30,7 @@ jobs:
     
     - name: Run tests with annotations and reports
       run: |
-        pytest --color=yes --tb=short --annotate --junitxml=pytest-report.xml --cov=. --cov-report=xml --cov-report=html
+        pytest --color=yes --tb=short --junitxml=pytest-report.xml --cov=. --cov-report=xml --cov-report=html
     
     - name: Upload test report
       uses: actions/upload-artifact@v4
