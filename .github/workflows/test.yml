@@ -32,12 +32,16 @@ jobs:
       run: |
         pytest --junitxml=pytest-report.xml --tb=short --color=yes
     
-    - name: Publish Test Results
-      uses: EnricoMi/publish-unit-test-result-action@v2
+    - name: Display test summary
       if: always()
-      with:
-        files: pytest-report.xml
-        check_name: Test Results (Python ${{ matrix.python-version }})
+      run: |
+        echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+        if [ -f pytest-report.xml ]; then
+          echo "✅ JUnit XML report generated successfully" >> $GITHUB_STEP_SUMMARY
+          echo "📊 Test report available in artifacts" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ JUnit XML report not found" >> $GITHUB_STEP_SUMMARY
+        fi
     
     - name: Upload test report
       uses: actions/upload-artifact@v4
